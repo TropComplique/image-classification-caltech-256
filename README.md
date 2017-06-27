@@ -12,5 +12,5 @@
   - build an input pipeline
   - train a simple CNN with Keras
   - train accuracy: 0.2397, validation accuracy: 0.2723
-  - training time: 15 min
+  - training time: 15 min on p2.xlarge
   - number of parameters: 1,188,001
