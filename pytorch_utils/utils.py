@@ -1,16 +1,16 @@
 import numpy as np
-import numexpr as ne
+import numexpr as ne # to speed up the computations
 from torch.autograd import Variable
 import torch.nn.functional as F
 
 
 def get_data():
 
-    train_images = np.load('../data/train_images.npy')
-    train_targets = np.load('../data/train_targets.npy')
+    train_images = np.load('~/data/train_images.npy')
+    train_targets = np.load('~/data/train_targets.npy')
 
-    val_images = np.load('../data/val_images.npy')
-    val_targets = np.load('../data/val_targets.npy')
+    val_images = np.load('~/data/val_images.npy')
+    val_targets = np.load('~/data/val_targets.npy')
 
     train_images = train_images.astype('float32')
     val_images = val_images.astype('float32')
@@ -36,10 +36,12 @@ def get_data():
     # transform to NCHW format
     train_images = np.transpose(train_images, axes=(0, 3, 1, 2))
     val_images = np.transpose(val_images, axes=(0, 3, 1, 2))
-    
+
+    # original labels are from 1 to 256,
+    # transform them to 0..255 range
     train_targets -= 1
     val_targets -= 1
-    
+
     return train_images, val_images, train_targets, val_targets
 
 

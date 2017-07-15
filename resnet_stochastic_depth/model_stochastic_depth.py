@@ -1,42 +1,47 @@
 import torch.nn as nn
 import torch.optim as optim
-from densenet import densenet121
+from resnet_stochastic_depth import resnet34
 
 
 def make_model():
 
-    model = densenet121(pretrained=True)
+    model = resnet34(pretrained=True)
 
     # make all params untrainable
     for p in model.parameters():
         p.requires_grad = False
 
     # reset the last fc layer
-    model.classifier = nn.Linear(1024, 256)
-    # model_size: penultimate_layer_output_dim,
-    # 201: 1920, 169: 1664, 121: 1024
+    model.fc = nn.Linear(512, 256)
 
     # make some other params trainable
     trainable_params = [
-        'features.norm5.weight',
-        'features.norm5.bias',
-        'features.denseblock4.denselayer16.conv.2.weight',
-        'features.denseblock4.denselayer15.conv.2.weight'
+        'layer4.2.conv1.weight',
+        'layer4.2.bn1.weight',
+        'layer4.2.bn1.bias',
+        'layer4.2.conv2.weight',
+        'layer4.2.bn2.weight',
+        'layer4.2.bn2.bias'
     ]
     for n, p in model.named_parameters():
         if n in trainable_params:
             p.requires_grad = True
 
+    # mend some relus
+    for n, p in model.named_modules():
+        if 'layer4.2.relu' in n:
+            p.inplace = False
+
     # create different parameter groups
-    classifier_weights = [model.classifier.weight]
-    classifier_biases = [model.classifier.bias]
+    classifier_weights = [model.fc.weight]
+    classifier_biases = [model.fc.bias]
     features_weights = [
         p for n, p in model.named_parameters()
-        if n in trainable_params and 'conv.2' in n
+        if n in trainable_params and 'conv' in n
     ]
     features_bn_weights = [
         p for n, p in model.named_parameters()
-        if n in trainable_params and 'norm5.weight' in n
+        if n in trainable_params and 'weight' in n and 'bn' in n
     ]
     features_bn_biases = [
         p for n, p in model.named_parameters()
