@@ -7,7 +7,8 @@ import torchvision.models as models
 def make_model():
 
     model = models.squeezenet1_1(pretrained=True)
-
+    model.num_classes = 256
+    
     # make all params untrainable
     for p in model.parameters():
         p.requires_grad = False
@@ -66,7 +67,7 @@ def make_model():
 
         {'params': features_weights, 'lr': features_lr, 'weight_decay': 1e-2},
         {'params': features_biases, 'lr': features_lr}
-    ], momentum=0.9, nesterov=True)
+    ], momentum=0.95, nesterov=True)
 
     # loss function
     criterion = nn.CrossEntropyLoss().cuda()
