@@ -6,11 +6,11 @@ import torch.nn.functional as F
 
 def get_data():
 
-    train_images = np.load('~/data/train_images.npy')
-    train_targets = np.load('~/data/train_targets.npy')
+    train_images = np.load('/home/ubuntu/data/train_images.npy')
+    train_targets = np.load('/home/ubuntu/data/train_targets.npy')
 
-    val_images = np.load('~/data/val_images.npy')
-    val_targets = np.load('~/data/val_targets.npy')
+    val_images = np.load('/home/ubuntu/data/val_images.npy')
+    val_targets = np.load('/home/ubuntu/data/val_targets.npy')
 
     train_images = train_images.astype('float32')
     val_images = val_images.astype('float32')
@@ -97,13 +97,20 @@ def evaluate(model, criterion, val_iterator):
 
 def top5_accuracy(true, pred):
     n_samples = len(true)
-    hits = np.equal(pred.argsort(1)[:, -5:], true.argmax(1).reshape(-1, 1)).sum()
+    hits = np.equal(pred.argsort(1)[:, -5:], true.reshape(-1, 1)).sum()
     return hits/n_samples
 
 
 def per_class_accuracy(true, pred):
-    hits = np.equal(pred, pred.max(1).reshape(-1, 1)).astype('int')
-    return np.equal(true, hits).mean(0)
+    
+    true_ohehot = np.zeros((len(true), 256))
+    for i in range(len(true)):
+        true_ohehot[i, true[i]] = 1.0
+    
+    pred_onehot = np.equal(pred, pred.max(1).reshape(-1, 1)).astype('int')
+    
+    # 20 samples per class
+    return (true_ohehot*pred_onehot).sum(0)/20.0
 
 
 def count_params(model):

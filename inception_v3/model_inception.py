@@ -1,12 +1,23 @@
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.init as init
-import torchvision.models as models
+import torch.utils.model_zoo as model_zoo
+from collections import OrderedDict
+from inception import inception_v3
 
 
 def make_model():
 
-    model = models.inception_v3(pretrained=True)
+    model = inception_v3(pretrained=False, aux_logits=False)
+    
+    state = model_zoo.load_url('https://download.pytorch.org/models/inception_v3_google-1a9a5a14.pth')
+    clean_state = OrderedDict()
+    # remove AuxLogits from the pretrained model
+    for k in state:
+        if not 'AuxLogits' in k:
+            clean_state[k] = state[k]
+    
+    model.load_state_dict(clean_state)
 
     # make all params untrainable
     for p in model.parameters():
@@ -19,48 +30,16 @@ def make_model():
     init.normal(model.fc.weight, std=0.01);
     init.constant(model.fc.bias, 0.0);
 
-    # make some other params trainable
-    trainable_params = [
-        'features.12.squeeze.weight',
-        'features.12.squeeze.bias',
-        'features.12.expand1x1.weight',
-        'features.12.expand1x1.bias',
-        'features.12.expand3x3.weight',
-        'features.12.expand3x3.bias'
-    ]
-    for n, p in model.named_parameters():
-        if n in trainable_params:
-            p.requires_grad = True
-
-    # mend some relus
-    for n, m in model.named_modules():
-        if 'features.12' in n and isinstance(m, nn.ReLU):
-            m.inplace = False
-
     # create different parameter groups
-    classifier_weights = [model.classifier[1].weight]
-    classifier_biases = [model.classifier[1].bias]
-    features_weights = [
-        p for n, p in model.named_parameters()
-        if n in trainable_params and 'weight' in n
-    ]
-    features_biases = [
-        p for n, p in model.named_parameters()
-        if n in trainable_params and 'bias' in n
-    ]
+    classifier_weights = [model.fc.weight]
+    classifier_biases = [model.fc.bias]
 
-    # set different learning rates
-    # but they are not actually used
     classifier_lr = 1e-1
-    features_lr = 1e-1
 
     # you need to tune only weight decay and momentum here
     optimizer = optim.SGD([
         {'params': classifier_weights, 'lr': classifier_lr, 'weight_decay': 1e-2},
-        {'params': classifier_biases, 'lr': classifier_lr},
-
-        {'params': features_weights, 'lr': features_lr, 'weight_decay': 1e-2},
-        {'params': features_biases, 'lr': features_lr}
+        {'params': classifier_biases, 'lr': classifier_lr}
     ], momentum=0.9, nesterov=True)
 
     # loss function
