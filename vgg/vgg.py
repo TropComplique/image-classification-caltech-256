@@ -3,12 +3,6 @@ import torch.utils.model_zoo as model_zoo
 import math
 
 
-__all__ = [
-    'VGG', 'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn',
-    'vgg19_bn', 'vgg19',
-]
-
-
 model_urls = {
     'vgg11': 'https://download.pytorch.org/models/vgg11-bbd30ac9.pth',
     'vgg13': 'https://download.pytorch.org/models/vgg13-c768596a.pth',
@@ -21,20 +15,31 @@ model_urls = {
 }
 
 
+def global_average_pooling(x):
+    x = F.avg_pool2d(x, kernel_size=x.size()[2:])
+    return x.squeeze()
+
+
+def sqrt_l2_normalize(x):
+    x = x.sqrt()
+    x = x/((x*x).sum(1).sqrt().expand(x.size()))
+    return x
+
+
 class VGG(nn.Module):
 
     def __init__(self, features, num_classes=1000):
         super(VGG, self).__init__()
         self.features = features
-        self.classifier = nn.Sequential(
+        self.classifier = nn.ModuleList([
             nn.Linear(512*7*7, 4096),
-            nn.ReLU(True),
+            nn.ReLU(),
             nn.Dropout(),
             nn.Linear(4096, 4096),
-            nn.ReLU(True),
+            nn.ReLU(),
             nn.Dropout(),
             nn.Linear(4096, num_classes),
-        )
+        ])
         self._initialize_weights()
 
     def forward(self, x):
@@ -72,7 +77,7 @@ def make_layers(cfg, batch_norm=False):
             else:
                 layers += [conv2d, nn.ReLU(inplace=True)]
             in_channels = v
-    return nn.Sequential(*layers)
+    return nn.ModuleList(layers)
 
 
 cfg = {

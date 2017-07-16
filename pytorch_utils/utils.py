@@ -89,6 +89,25 @@ def evaluate(model, criterion, val_iterator):
         accuracy += test_accuracy*n_batch_samples
         total_samples += n_batch_samples
         # evaluate on 24 random batches only, for speed
-        if j > 23: break
+        if j > 23:
+            break
 
     return loss/total_samples, accuracy/total_samples
+
+
+def top5_accuracy(true, pred):
+    n_samples = len(true)
+    hits = np.equal(pred.argsort(1)[:, -5:], true.argmax(1).reshape(-1, 1)).sum()
+    return hits/n_samples
+
+
+def per_class_accuracy(true, pred):
+    hits = np.equal(pred, pred.max(1).reshape(-1, 1)).astype('int')
+    return np.equal(true, hits).mean(0)
+
+
+def count_params(model):
+    count = 0
+    for p in model.parameters():
+        count += p.numel()
+    return count

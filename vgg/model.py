@@ -1,54 +1,58 @@
 import torch.nn as nn
 import torch.optim as optim
-from resnet import resnet34
+from vgg import vgg16_bn
 
 
 def make_model():
 
-    model = resnet34(pretrained=True)
+    model = vgg16_bn(pretrained=True)
 
     # make all params untrainable
     for p in model.parameters():
         p.requires_grad = False
 
-    model.fc = nn.Linear(512, 256)
+    model.classifier[6] = nn.Linear(4096, 256)
 
-    for p in model.layer4[2].parameters():
-        p.requires_grad = True
+    # initialize the last layer's weights
+    init.normal(model.classifier[6].weight, std=0.01);
+    init.constant(model.classifier[6].bias, 0.0);
 
-    for m in model.layer4[2].modules():
-        if isinstance(m, nn.ReLU):
-            m.inplace = False
+    # make some other params trainable
+    trainable_params = [
+        'classifier.0.weight',
+        'classifier.0.bias',
+        'classifier.3.weight',
+        'classifier.3.bias'
+    ]
+    for n, p in model.named_parameters():
+        if n in trainable_params:
+            p.requires_grad = True
+
+    # create different parameter groups
+    classifier_weights = [model.classifier[6].weight]
+    classifier_biases = [model.classifier[6].bias]
+    features_weights = [
+        p for n, p in model.named_parameters()
+        if n in trainable_params and 'weight' in n
+    ]
+    features_biases = [
+        p for n, p in model.named_parameters()
+        if n in trainable_params and 'bias' in n
+    ]
 
     # set different learning rates
-    last_lr = 1e-4
-    penultimate_lr = 1e-4
+    # but they are not actually used
+    classifier_lr = 1e-1
+    features_lr = 1e-1
 
-    last_weights = [model.fc.weight]
-    last_bias = [model.fc.bias]
-
-    penultimate_weights = [
-        p[1] for p in model.layer4[2].named_parameters()
-        if 'conv' in p[0]
-    ]
-    penultimate_bn_weights = [
-        p[1] for p in model.layer4[2].named_parameters()
-        if 'weight' in p[0] and 'bn' in p[0]
-    ]
-    penultimate_biases = [
-        p[1] for p in model.layer4[2].named_parameters()
-        if 'bias' in p[0]
-    ]
-
+    # you need to tune only weight decay and momentum here
     optimizer = optim.SGD([
-        {'params': last_weights, 'lr': last_lr, 'weight_decay': 1e-4},
-        {'params': last_bias, 'lr': last_lr},
+        {'params': classifier_weights, 'lr': classifier_lr, 'weight_decay': 1e-2},
+        {'params': classifier_biases, 'lr': classifier_lr},
 
-        {'params': penultimate_weights, 'lr': penultimate_lr, 'weight_decay': 1e-4},
-        {'params': penultimate_bn_weights, 'lr': penultimate_lr},
-        {'params': penultimate_biases, 'lr': penultimate_lr}
+        {'params': features_weights, 'lr': features_lr, 'weight_decay': 1e-2},
+        {'params': features_biases, 'lr': features_lr}
     ], momentum=0.9, nesterov=True)
-
 
     # loss function
     criterion = nn.CrossEntropyLoss().cuda()

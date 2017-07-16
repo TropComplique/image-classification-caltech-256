@@ -1,27 +1,32 @@
 import torch.nn as nn
 import torch.optim as optim
-from resnet import resnet34
+import torch.nn.init as init
+import torchvision.models as models
 
 
 def make_model():
 
-    model = resnet34(pretrained=True)
+    model = models.inception_v3(pretrained=True)
 
     # make all params untrainable
     for p in model.parameters():
         p.requires_grad = False
 
-    # reset the last fc layer
-    model.fc = nn.Linear(512, 256)
+    # reset the last layer
+    model.fc = nn.Linear(2048, 256)
+
+    # initialize the last layer's weights
+    init.normal(model.fc.weight, std=0.01);
+    init.constant(model.fc.bias, 0.0);
 
     # make some other params trainable
     trainable_params = [
-        'layer4.2.conv1.weight',
-        'layer4.2.bn1.weight',
-        'layer4.2.bn1.bias',
-        'layer4.2.conv2.weight',
-        'layer4.2.bn2.weight',
-        'layer4.2.bn2.bias'
+        'features.12.squeeze.weight',
+        'features.12.squeeze.bias',
+        'features.12.expand1x1.weight',
+        'features.12.expand1x1.bias',
+        'features.12.expand3x3.weight',
+        'features.12.expand3x3.bias'
     ]
     for n, p in model.named_parameters():
         if n in trainable_params:
@@ -29,21 +34,17 @@ def make_model():
 
     # mend some relus
     for n, m in model.named_modules():
-        if 'layer4.2.relu' in n:
+        if 'features.12' in n and isinstance(m, nn.ReLU):
             m.inplace = False
 
     # create different parameter groups
-    classifier_weights = [model.fc.weight]
-    classifier_biases = [model.fc.bias]
+    classifier_weights = [model.classifier[1].weight]
+    classifier_biases = [model.classifier[1].bias]
     features_weights = [
         p for n, p in model.named_parameters()
-        if n in trainable_params and 'conv' in n
+        if n in trainable_params and 'weight' in n
     ]
-    features_bn_weights = [
-        p for n, p in model.named_parameters()
-        if n in trainable_params and 'weight' in n and 'bn' in n
-    ]
-    features_bn_biases = [
+    features_biases = [
         p for n, p in model.named_parameters()
         if n in trainable_params and 'bias' in n
     ]
@@ -59,8 +60,7 @@ def make_model():
         {'params': classifier_biases, 'lr': classifier_lr},
 
         {'params': features_weights, 'lr': features_lr, 'weight_decay': 1e-2},
-        {'params': features_bn_weights, 'lr': features_lr},
-        {'params': features_bn_biases, 'lr': features_lr}
+        {'params': features_biases, 'lr': features_lr}
     ], momentum=0.9, nesterov=True)
 
     # loss function
