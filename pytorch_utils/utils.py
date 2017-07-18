@@ -95,20 +95,20 @@ def evaluate(model, criterion, val_iterator):
     return loss/total_samples, accuracy/total_samples
 
 
-def top5_accuracy(true, pred):
+def top_k_accuracy(true, pred, k=5):
     n_samples = len(true)
-    hits = np.equal(pred.argsort(1)[:, -5:], true.reshape(-1, 1)).sum()
+    hits = np.equal(pred.argsort(1)[:, -k:], true.reshape(-1, 1)).sum()
     return hits/n_samples
 
 
 def per_class_accuracy(true, pred):
-    
+
     true_ohehot = np.zeros((len(true), 256))
     for i in range(len(true)):
         true_ohehot[i, true[i]] = 1.0
-    
+
     pred_onehot = np.equal(pred, pred.max(1).reshape(-1, 1)).astype('int')
-    
+
     # 20 samples per class
     return (true_ohehot*pred_onehot).sum(0)/20.0
 
