@@ -29,8 +29,9 @@ def entropy(pred):
     return result
 
 
-def model_calibration(true, pred):
-    pass
+def model_calibration(true, pred, n_bins):
+    hits = np.equal(pred.argmax(1), true).astype('float')
+    return calibration_curve(hits, pred.max(1), n_bins=n_bins)
 
 
 def count_params(model):

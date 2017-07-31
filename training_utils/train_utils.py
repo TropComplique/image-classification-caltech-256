@@ -45,7 +45,7 @@ def optimization_step(model, criterion, optimizer, x_batch, y_batch):
 def evaluate(model, criterion, val_iterator, n_batches):
 
     loss = 0.0
-    accuracy = 0.0
+    acc = 0.0 # accuracy
     top5_accuracy = 0.0
     total_samples = 0
 
@@ -64,14 +64,14 @@ def evaluate(model, criterion, val_iterator, n_batches):
         batch_accuracy, batch_top5_accuracy = accuracy(y_batch, pred, top_k=(1, 5))
 
         loss += batch_loss*n_batch_samples
-        accuracy += batch_accuracy*n_batch_samples
+        acc += batch_accuracy*n_batch_samples
         top5_accuracy += batch_top5_accuracy*n_batch_samples
         total_samples += n_batch_samples
 
-        if j >= n_steps:
+        if j >= n_batches:
             break
 
-    return loss/total_samples, accuracy/total_samples, top5_accuracy/total_samples
+    return loss/total_samples, acc/total_samples, top5_accuracy/total_samples
 
 
 def train(model, criterion, optimizer,
