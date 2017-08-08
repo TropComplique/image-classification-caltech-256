@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 from collections import OrderedDict
 
+
 __all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201']
 
 
@@ -30,7 +31,7 @@ class _DenseLayer(nn.Sequential):
 
     def forward(self, x):
         new_features = super(_DenseLayer, self).forward(x)
-
+        
         if self.drop_rate > 0:
             new_features = F.dropout(new_features, p=self.drop_rate, training=self.training)
 
@@ -68,7 +69,7 @@ class DenseNet(nn.Module):
         num_classes (int) - number of classification classes
     """
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
-                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000):
+                 num_init_features=64, bn_size=4, drop_rate=0.2, final_drop_rate=0.2, num_classes=1000):
 
         super(DenseNet, self).__init__()
 
@@ -83,9 +84,16 @@ class DenseNet(nn.Module):
         # Each denseblock
         num_features = num_init_features
         for i, num_layers in enumerate(block_config):
+            
+            # add dropout to the last dense block
+            if i == len(block_config) - 1:
+                dropout = drop_rate
+            else:
+                dropout = 0
+            
             block = _DenseBlock(
                 num_layers=num_layers, num_input_features=num_features,
-                bn_size=bn_size, growth_rate=growth_rate, drop_rate=drop_rate
+                bn_size=bn_size, growth_rate=growth_rate, drop_rate=dropout
             )
             self.features.add_module('denseblock%d' % (i + 1), block)
             num_features = num_features + num_layers*growth_rate
@@ -101,50 +109,62 @@ class DenseNet(nn.Module):
         self.features.add_module('norm5', nn.BatchNorm2d(num_features))
 
         # Linear layer
+        self.dropout = nn.Dropout(p=final_drop_rate)
         self.classifier = nn.Linear(num_features, num_classes)
 
     def forward(self, x):
         features = self.features(x)
         out = F.relu(features, inplace=False)
-        out = F.avg_pool2d(out, kernel_size=7).view(features.size(0), -1)
+        # I changed 7 -> 9 because 224 -> 299
+        out = F.avg_pool2d(out, kernel_size=9).view(features.size(0), -1)
+        out = self.dropout(out)
         out = self.classifier(out)
         return out
 
 
-def densenet121(pretrained=False):
+def densenet121(pretrained=False, drop_rate=0.2, final_drop_rate=0.2):
     r"""Densenet-121 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = DenseNet(num_init_features=64, growth_rate=32, block_config=(6, 12, 24, 16))
+    model = DenseNet(
+        num_init_features=64, growth_rate=32, block_config=(6, 12, 24, 16), 
+        drop_rate=drop_rate, final_drop_rate=final_drop_rate
+    )
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['densenet121']))
     return model
 
 
-def densenet169(pretrained=False):
+def densenet169(pretrained=False, drop_rate=0.2, final_drop_rate=0.2):
     r"""Densenet-169 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = DenseNet(num_init_features=64, growth_rate=32, block_config=(6, 12, 32, 32))
+    model = DenseNet(
+        num_init_features=64, growth_rate=32, block_config=(6, 12, 32, 32), 
+        drop_rate=drop_rate, final_drop_rate=final_drop_rate
+    )
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['densenet169']))
     return model
 
 
-def densenet201(pretrained=False):
+def densenet201(pretrained=False, drop_rate=0.2, final_drop_rate=0.2):
     r"""Densenet-201 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = DenseNet(num_init_features=64, growth_rate=32, block_config=(6, 12, 48, 32))
+    model = DenseNet(
+        num_init_features=64, growth_rate=32, block_config=(6, 12, 48, 32), 
+        drop_rate=drop_rate, final_drop_rate=final_drop_rate
+    )
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['densenet201']))
     return model

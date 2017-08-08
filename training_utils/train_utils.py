@@ -1,10 +1,13 @@
+import numpy as np
 from torch.autograd import Variable
 import torch.nn.functional as F
-from math import ceil
 import time
 import copy
+from tqdm import tqdm
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
+# compute accuracy with pytorch
 def accuracy(true, pred, top_k=(1,)):
 
     max_k = max(top_k)
@@ -81,6 +84,8 @@ def train(model, criterion, optimizer,
 
     all_losses = []
     all_models = []
+    
+    is_reduce_on_plateau = isinstance(lr_scheduler, ReduceLROnPlateau)
 
     running_loss = 0.0
     running_accuracy = 0.0
@@ -90,8 +95,8 @@ def train(model, criterion, optimizer,
 
     for epoch in range(0, n_epochs):
         for step, (x_batch, y_batch) in enumerate(train_iterator, 1 + epoch*n_batches):
-
-            if lr_scheduler is not None:
+            
+            if lr_scheduler is not None and not is_reduce_on_plateau:
                 optimizer = lr_scheduler(optimizer, step)
 
             batch_loss, batch_accuracy, batch_top5_accuracy = optimization_step(
@@ -107,7 +112,7 @@ def train(model, criterion, optimizer,
                     model, criterion, val_iterator, n_validation_batches
                 )
                 end = time.time()
-
+                
                 print('{0:.2f}  {1:.3f} {2:.3f}  {3:.3f} {4:.3f}  {5:.3f} {6:.3f}  {7:.3f}'.format(
                     step/n_batches, running_loss/validation_step, test_loss,
                     running_accuracy/validation_step, test_accuracy,
@@ -120,6 +125,9 @@ def train(model, criterion, optimizer,
                     running_accuracy/validation_step, test_accuracy,
                     running_top5_accuracy/validation_step, test_top5_accuracy
                 )]
+                
+                if is_reduce_on_plateau:
+                    lr_scheduler.step(test_accuracy)
 
                 running_loss = 0.0
                 running_accuracy = 0.0
@@ -136,3 +144,49 @@ def train(model, criterion, optimizer,
                 model.cuda()
 
     return all_losses, all_models
+
+
+def predict(model, val_iterator_no_shuffle, return_erroneous=False):
+
+    val_predictions = []
+    val_true_targets = []
+    
+    if return_erroneous:
+        erroneous_samples = []
+        erroneous_targets = []
+        erroneous_predictions = []
+    
+    model.eval()
+
+    for x_batch, y_batch in tqdm(val_iterator_no_shuffle):
+
+        x_batch = Variable(x_batch.cuda(), volatile=True)
+        y_batch = Variable(y_batch.cuda(), volatile=True)
+        logits = model(x_batch)
+
+        # compute probabilities
+        probs = F.softmax(logits)
+        
+        if return_erroneous:
+            _, argmax = probs.max(1)
+            hits = argmax.eq(y_batch).data
+            miss = 1 - hits
+            if miss.nonzero().numel() != 0:
+                erroneous_samples += [x_batch[miss.nonzero()[:, 0]].cpu().data.numpy()]
+                erroneous_targets += [y_batch[miss.nonzero()[:, 0]].cpu().data.numpy()]
+                erroneous_predictions += [probs[miss.nonzero()[:, 0]].cpu().data.numpy()]
+        
+        val_predictions += [probs.cpu().data.numpy()]
+        val_true_targets += [y_batch.cpu().data.numpy()]
+        
+    val_predictions = np.concatenate(val_predictions, axis=0)
+    val_true_targets = np.concatenate(val_true_targets, axis=0)
+    
+    if return_erroneous:
+        erroneous_samples = np.concatenate(erroneous_samples, axis=0)
+        erroneous_targets = np.concatenate(erroneous_targets, axis=0)
+        erroneous_predictions = np.concatenate(erroneous_predictions, axis=0)
+        return val_predictions, val_true_targets,\
+            erroneous_samples, erroneous_targets, erroneous_predictions
+    
+    return val_predictions, val_true_targets
