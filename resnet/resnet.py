@@ -65,10 +65,11 @@ class ResNet(nn.Module):
         self.layer1 = self._make_layer(64, layers[0])
         self.layer2 = self._make_layer(128, layers[1], stride=2)
         self.layer3 = self._make_layer(256, layers[2], stride=2)
+        self.inside_dropout = nn.Dropout(p=0.5)
         self.layer4 = self._make_layer(512, layers[3], stride=2)
-        # I changed 7 -> 9 because 224 -> 299
-        self.avgpool = nn.AvgPool2d(9)
-        self.dropout = nn.Dropout(p=0.25)
+        # I changed 7 -> 10 because 224 -> 299
+        self.avgpool = nn.AvgPool2d(10)
+        self.dropout = nn.Dropout(p=0.5)
         self.fc = nn.Linear(512, num_classes)
 
         for m in self.modules():
@@ -108,6 +109,7 @@ class ResNet(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
+        x = self.inside_dropout(x)
         x = self.layer4(x)
 
         x = self.avgpool(x)

@@ -45,13 +45,14 @@ class BasicBlock(nn.Module):
         out = residual
 
         if not self.training or torch.rand(1)[0] < self.survival_rate:
+            
             out = self.conv1(x)
             out = self.bn1(out)
             out = self.relu(out)
 
             out = self.conv2(out)
             out = self.bn2(out)
-
+            
             if self.training:
                 out /= self.survival_rate
 
@@ -86,7 +87,8 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(128, layers[1], survival_rates[1], stride=2)
         self.layer3 = self._make_layer(256, layers[2], survival_rates[2], stride=2)
         self.layer4 = self._make_layer(512, layers[3], survival_rates[3], stride=2)
-        self.avgpool = nn.AvgPool2d(7)
+        self.avgpool = nn.AvgPool2d(10)
+        self.dropout = nn.Dropout(0.15)
         self.fc = nn.Linear(512, num_classes)
 
         for m in self.modules():
@@ -97,9 +99,10 @@ class ResNet(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def _make_layer(self, planes, blocks, survival_rates, stride=1):
+    def _make_layer(self, planes, blocks, survival_rates=None, stride=1):
         downsample = None
-        assert len(survival_rates) == blocks
+        if survival_rates is None:
+            survival_rates = [1.0]*blocks
         if stride != 1:
             downsample = nn.Sequential(
                 nn.Conv2d(
@@ -131,6 +134,7 @@ class ResNet(nn.Module):
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
+        x = self.dropout(x)
         x = self.fc(x)
 
         return x

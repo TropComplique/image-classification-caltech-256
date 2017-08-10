@@ -94,10 +94,15 @@ def Xception(weight_decay=1e-4, classes=256, input_shape=(299, 299, 3)):
     x = MaxPooling2D((3, 3), strides=(2, 2), padding='same', name='block13_pool')(x)
     x = layers.add([x, residual])
 
-    x = SeparableConv2D(1536, (3, 3), padding='same', use_bias=False, name='block14_sepconv1')(x)
+    x = SeparableConv2D(
+        1536, (3, 3), padding='same',
+        use_bias=False, name='block14_sepconv1',
+        depthwise_regularizer=keras.regularizers.l2(weight_decay),
+        pointwise_regularizer=keras.regularizers.l2(weight_decay)
+    )(x)
     x = BatchNormalization(name='block14_sepconv1_bn')(x)
     x = Activation('relu', name='block14_sepconv1_act')(x)
-
+    x = Dropout(0.5)(x)
     x = SeparableConv2D(
         2048, (3, 3), padding='same', 
         use_bias=False, name='block14_sepconv2',
@@ -121,10 +126,5 @@ def Xception(weight_decay=1e-4, classes=256, input_shape=(299, 299, 3)):
     x = Dropout(0.5)(x)
     logits = Dense(classes, kernel_regularizer=keras.regularizers.l2(weight_decay))(x)
     probabilities = Activation('softmax')(logits)
-
-    model = Model(model.input, probabilities, name='xception')
     
-    for layer in model.layers[:-7]:
-        layer.trainable = False
-
-    return model
+    return Model(model.input, probabilities, name='xception')
