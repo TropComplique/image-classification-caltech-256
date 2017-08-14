@@ -41,11 +41,11 @@ def get_model(class_weights):
     ]
     features_weights += [
         p for n, p in model.named_parameters()
-        if n in trainable_params and 'downsample' in n and 'weight' in n
+        if n in trainable_params and 'downsample.0' in n and 'weight' in n
     ]
     features_bn_weights = [
         p for n, p in model.named_parameters()
-        if n in trainable_params and 'bn' in n and 'weight' in n
+        if n in trainable_params and 'weight' in n and ('bn' in n or 'downsample.1' in n)
     ]
     features_bn_biases = [
         p for n, p in model.named_parameters()

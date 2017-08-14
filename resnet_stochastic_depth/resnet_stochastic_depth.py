@@ -10,7 +10,7 @@ model_urls = {
 }
 
 
-def get_survival_rate(l, L, p_L=0.5):
+def get_survival_rate(l, L, p_L=0.7):
     return 1.0 - (l/L)*(1 - p_L)
 
 
