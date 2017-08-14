@@ -1,11 +1,37 @@
-# image-classification-caltech-256
-## Experiments
+# Image Classification Experiments on Caltech-256 dataset
+## 
 
-| model | log loss | accuracy, % | top 5 accuracy, %| number of parameters | training time, min. |
-| --- | --- | --- | --- | --- |  --- |
-| ResNet-34       | 0.742 | 83 | 95 | 21,416,000 | 7 |
-| DenseNet-121    | 0.788 | 84 | 95 | 7,216,256 | 16 |
-| Inception v3    | 1.433 | 77 | 91 | 22,310,112 | 10 |
-| SqueezeNet v1.1, ensemble of 4 snapshots | 1.397 | 66 | 86 | 853,824 | 20 |
+| model | accuracy, % | top 5 accuracy, %| number of parameters |
+| --- | --- | --- | --- | 
+| DenseNet-121    | 85 | 96 | 7,216,256 |
+| DenseNet-121 with trained ternary quantization | 71 | 89 | ~7M 2-bit |
+| DenseNet-201    | 87 | 97 | 18,584,704 |
+| ResNet-18 | 81 | 94 | 11,307,840 |
+| ResNet-18 with stochastic depth | 65 | 85 | 11,307,840 |
+| SqueezeNet v1.1 | 66 | 85 | 853824 | 
+| SqueezeNet v1.1 with entropy regularization | 66 | 86 | 853824 |
+| Delegating classifiers | 77 | 93 | - |
 
-## Snapshot Ensembles
+## Trained ternary quantization
+
+## Stochastic depth
+
+## Entropy regularization
+
+## Delegating classifiers
+
+## Notes
+* Cyclical Cosine Annealing
+
+## Requirements
+* Python 3.5
+* pytorch 0.2
+* torchvision, Pillow
+* numpy, pandas, sklearn, matplotlib, tqdm
+
+## References
+[1] [Regularizing Neural Networks by Penalizing Confident Output Distributions](https://arxiv.org/abs/1701.06548)
+
+[2] [Trained Ternary Quantization](https://arxiv.org/abs/1612.01064)
+
+[3] [Deep Networks with Stochastic Depth](https://arxiv.org/abs/1603.09382)
