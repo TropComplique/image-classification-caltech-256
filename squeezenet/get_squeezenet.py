@@ -1,12 +1,18 @@
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from torch.nn.init import normal, constant
-import torchvision.models as models
+from squeezenet import squeezenet1_1
 
 
-def get_model(class_weights=None):
+def entropy(logit):
+    prob = F.softmax(logit)
+    return -(prob*prob.log()).sum(1).mean()
 
-    model = models.squeezenet1_1(pretrained=True)
+
+def get_model(class_weights=None, with_entropy=False):
+
+    model = squeezenet1_1(pretrained=True)
     model.num_classes = 256
 
     # make all params untrainable
@@ -25,7 +31,10 @@ def get_model(class_weights=None):
 
     # make some other params trainable
     trainable_params = []
-    trainable_params += [n for n, p in model.named_parameters() if 'features.12' in n]
+    trainable_params += [
+        n for n, p in model.named_parameters() 
+        if 'features.12' in n
+    ]
     for n, p in model.named_parameters():
         if n in trainable_params:
             p.requires_grad = True
@@ -52,15 +61,23 @@ def get_model(class_weights=None):
     # but they are not actually used (because lr_scheduler is used)
     
     params = [
-        {'params': classifier_weights, 'lr': classifier_lr, 'weight_decay': 1e-4},
+        {'params': classifier_weights, 'lr': classifier_lr, 'weight_decay': 1e-2},
         {'params': classifier_biases, 'lr': classifier_lr},
-        {'params': features_weights, 'lr': features_lr, 'weight_decay': 1e-4},
+        {'params': features_weights, 'lr': features_lr, 'weight_decay': 1e-2},
         {'params': features_biases, 'lr': features_lr}
     ]
     optimizer = optim.SGD(params, momentum=0.9, nesterov=True)
             
     # loss function
-    criterion = nn.CrossEntropyLoss(weight=class_weights).cuda()
+    logloss = nn.CrossEntropyLoss(weight=class_weights).cuda()
+    
+    if with_entropy:
+        beta = 0.5
+        def criterion(logits, true):
+            return logloss(logits, true) - beta*entropy(logits)
+    else:
+        criterion = logloss
+        
     # move the model to gpu
     model = model.cuda()
     return model, criterion, optimizer

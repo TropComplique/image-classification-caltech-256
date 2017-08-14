@@ -88,7 +88,6 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(256, layers[2], survival_rates[2], stride=2)
         self.layer4 = self._make_layer(512, layers[3], survival_rates[3], stride=2)
         self.avgpool = nn.AvgPool2d(10)
-        self.dropout = nn.Dropout(0.15)
         self.fc = nn.Linear(512, num_classes)
 
         for m in self.modules():
@@ -134,7 +133,6 @@ class ResNet(nn.Module):
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
-        x = self.dropout(x)
         x = self.fc(x)
 
         return x

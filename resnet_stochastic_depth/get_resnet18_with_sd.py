@@ -1,12 +1,12 @@
 import torch.nn as nn
 import torch.optim as optim
 from torch.nn.init import normal, constant
-from resnet_stochastic_depth import resnet34
+from resnet_stochastic_depth import resnet18
 
 
 def get_model(class_weights):
 
-    model = resnet34(pretrained=True)
+    model = resnet18(pretrained=True)
 
     # make all params untrainable
     for p in model.parameters():
@@ -14,7 +14,7 @@ def get_model(class_weights):
 
     # reset the last fc layer
     model.fc = nn.Linear(512, 256)
-    normal(model.fc.weight, 0.0, 0.01)
+    normal(model.fc.weight, 0.0, 0.001)
     constant(model.fc.bias, 0.0)
     
     # make some other params trainable
@@ -57,9 +57,9 @@ def get_model(class_weights):
     # but they are not actually used (because lr_scheduler is used)
     
     params = [
-        {'params': classifier_weights, 'lr': classifier_lr, 'weight_decay': 1e-5},
+        {'params': classifier_weights, 'lr': classifier_lr, 'weight_decay': 1e-3},
         {'params': classifier_biases, 'lr': classifier_lr},
-        {'params': features_weights, 'lr': features_lr, 'weight_decay': 1e-5},
+        {'params': features_weights, 'lr': features_lr, 'weight_decay': 1e-3},
         {'params': features_bn_weights, 'lr': features_lr},
         {'params': features_bn_biases, 'lr': features_lr}
     ]
