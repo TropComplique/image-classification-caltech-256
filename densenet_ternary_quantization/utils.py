@@ -10,7 +10,7 @@ from train_utils import evaluate, accuracy
 
 
 # hyperparameter
-t = 0.05
+t = 0.1
 
 
 def initial_scales(kernel):
@@ -35,8 +35,8 @@ def get_grads(kernel_grad, kernel, w_p, w_n):
         (a*kernel_grad).sum(), (b*kernel_grad).sum()
 
 
-def optimization_step(model, scaling_factors, criterion, 
-                      optimizer, optimizer_fp,
+def optimization_step(model, criterion, 
+                      optimizer, optimizer_fp, optimizer_sf,
                       x_batch, y_batch):
 
     x_batch, y_batch = Variable(x_batch.cuda()), Variable(y_batch.cuda(async=True))
@@ -53,11 +53,13 @@ def optimization_step(model, scaling_factors, criterion,
 
     optimizer.zero_grad()
     optimizer_fp.zero_grad()
+    optimizer_sf.zero_grad()
     # compute grads for quantized model
     loss.backward()
     
-    all_kernels = [kernel for kernel in optimizer.param_groups[2]['params']]
-    all_fp_kernels = [kernel for kernel in optimizer_fp.param_groups[0]['params']]
+    all_kernels = optimizer.param_groups[2]['params']
+    all_fp_kernels = optimizer_fp.param_groups[0]['params']
+    scaling_factors = optimizer_sf.param_groups[0]['params']
     
     for i in range(len(all_kernels)):
         
@@ -68,7 +70,8 @@ def optimization_step(model, scaling_factors, criterion,
         k_fp = all_fp_kernels[i]
         
         # get scaling factors for quantized kernel
-        w_p, w_n = scaling_factors[i]
+        f = scaling_factors[i]
+        w_p, w_n = f.data[0], f.data[1]
         
         # get modified grads
         k_fp_grad, w_p_grad, w_n_grad = get_grads(k.grad.data, k.data, w_p, w_n)
@@ -79,10 +82,8 @@ def optimization_step(model, scaling_factors, criterion,
         # we don't need to update quantized kernel directly
         k.grad.data.zero_()
         
-        # update scaling factors
-        w_p -=  1e-3*w_p_grad
-        w_n -=  1e-3*w_n_grad
-        scaling_factors[i] = (w_p, w_n)
+        # grad for scaling factors
+        f.grad = Variable(torch.FloatTensor([w_p_grad, w_n_grad]).cuda())
     
     # update the last fc layer and all batch norm params in quantized model
     optimizer.step()
@@ -90,12 +91,16 @@ def optimization_step(model, scaling_factors, criterion,
     # update full precision kernels
     optimizer_fp.step()
     
+    # update scaling factors
+    optimizer_sf.step()
+    
     # update quantized kernels
     for i in range(len(all_kernels)):
         
         k = all_kernels[i]
         k_fp = all_fp_kernels[i]
-        w_p, w_n = scaling_factors[i]
+        f = scaling_factors[i]
+        w_p, w_n = f.data[0], f.data[1]
         
         k.data = quantize(k_fp.data, w_p, w_n)
     
@@ -103,8 +108,8 @@ def optimization_step(model, scaling_factors, criterion,
 
 
 # just training helper, nothing special
-def train(model, scaling_factors, criterion, 
-          optimizer, optimizer_fp,
+def train(model, criterion, 
+          optimizer, optimizer_fp, optimizer_sf,
           train_iterator, n_epochs, n_batches,
           val_iterator, validation_step, n_validation_batches,
           saving_step=None, lr_scheduler=None):
@@ -127,8 +132,8 @@ def train(model, scaling_factors, criterion,
                 optimizer = lr_scheduler(optimizer, step)
 
             batch_loss, batch_accuracy, batch_top5_accuracy = optimization_step(
-                model, scaling_factors, criterion, 
-                optimizer, optimizer_fp,
+                model, criterion, 
+                optimizer, optimizer_fp, optimizer_sf,
                 x_batch, y_batch
             )
             running_loss += batch_loss
