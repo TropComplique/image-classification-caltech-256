@@ -5,6 +5,7 @@
 | --- | --- | --- | --- | 
 | DenseNet-121    | 85 | 96 | 7,216,256 |
 | DenseNet-121 with trained ternary quantization | 73 | 91 | ~7.2M 2-bit, ~79% zeros |
+| DenseNet-121 with binary weights | 41 | 67 | ~7.2M 1-bit |
 | DenseNet-201    | 87 | 97 | 18,584,704 |
 | ResNet-18 | 81 | 94 | 11,307,840 |
 | ResNet-18 with trained ternary quantization | 52 | 78 | ~11M 2-bit, ~86% zeros |
@@ -14,6 +15,8 @@
 | Delegating classifiers | 77 | 93 | - |
 
 ## Trained ternary quantization
+
+## Binary-Weights-Networks
 
 ## Stochastic depth
 
@@ -40,3 +43,5 @@
 [3] [Deep Networks with Stochastic Depth](https://arxiv.org/abs/1603.09382)
 
 [4] [SmoothGrad: removing noise by adding noise](https://arxiv.org/abs/1706.03825)
+
+[5] [XNOR-Net: ImageNet Classification Using Binary Convolutional Neural Networks](https://arxiv.org/abs/1603.05279)
