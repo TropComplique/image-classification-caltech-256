@@ -81,7 +81,6 @@ def get_class_weights(class_to_idx):
     return w, decode
 
 
-
 # use this if you want to load all the data to the RAM
 def get_data():
 
