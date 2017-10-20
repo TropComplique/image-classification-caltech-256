@@ -32,17 +32,17 @@ def get_model(class_weights=None, with_entropy=False):
     # make some other params trainable
     trainable_params = []
     trainable_params += [
-        n for n, p in model.named_parameters() 
+        n for n, p in model.named_parameters()
         if 'features.12' in n
     ]
     for n, p in model.named_parameters():
         if n in trainable_params:
             p.requires_grad = True
-    
+
     for m in model.features[12].modules():
         if isinstance(m, nn.ReLU):
             m.inplace = False
-    
+
     # create different parameter groups
     classifier_weights = [model.classifier[1].weight]
     classifier_biases = [model.classifier[1].bias]
@@ -59,7 +59,7 @@ def get_model(class_weights=None, with_entropy=False):
     classifier_lr = 1e-2
     features_lr = 1e-2
     # but they are not actually used (because lr_scheduler is used)
-    
+
     params = [
         {'params': classifier_weights, 'lr': classifier_lr, 'weight_decay': 1e-2},
         {'params': classifier_biases, 'lr': classifier_lr},
@@ -67,17 +67,17 @@ def get_model(class_weights=None, with_entropy=False):
         {'params': features_biases, 'lr': features_lr}
     ]
     optimizer = optim.SGD(params, momentum=0.9, nesterov=True)
-            
+
     # loss function
     logloss = nn.CrossEntropyLoss(weight=class_weights).cuda()
-    
+
     if with_entropy:
         beta = 0.5
         def criterion(logits, true):
             return logloss(logits, true) - beta*entropy(logits)
     else:
         criterion = logloss
-        
+
     # move the model to gpu
     model = model.cuda()
     return model, criterion, optimizer

@@ -1,5 +1,5 @@
 # Image Classification Experiments on Caltech-256 dataset
-##
+## Results
 
 | model | accuracy, % | top 5 accuracy, %| number of parameters |
 | --- | --- | --- | --- |
@@ -14,23 +14,26 @@
 | SqueezeNet v1.1 with entropy regularization | 66 | 86 | 853,824 |
 | Delegating classifiers | 77 | 93 | - |
 
-## Trained ternary quantization
-Trained ternary quantization [2] is a method to reduce size of a neural network. It replaces all weights in a convolutional layer with +1, 0, -1 and two float scaling factors (one for +1 and one for -1).
+### Trained ternary quantization
+Trained ternary quantization [2] is a method of reducing size of a neural network. It replaces all weights in a convolutional layer with +1, 0, -1 and two float scaling factors (one for +1 and one for -1).
 
-## Binary-Weights-Networks
+### Binary-Weights-Networks
 
-## Stochastic depth
+### Stochastic depth
 
-## Entropy regularization
+### Entropy regularization
 
-## Delegating classifiers
+### Delegating classifiers
 
-## SmoothGrad
+### SmoothGrad
 SmoothGrad is a method of computing nice sensitivity maps. Sensitivity maps show which image pixels influence class predictions. They require to compute gradients with respect to an input image. Here are a few examples:
 ![sensitivity maps with smoothgrad](sensitivity_maps.png)
 
+## Implementation details
+
 ## Notes
-* Cyclical Cosine Annealing
+* I often use cosine annealing [6] of the learning rate. I believe that this reduces training time
+a lot.
 
 ## Requirements
 * Python 3.5
@@ -48,3 +51,5 @@ SmoothGrad is a method of computing nice sensitivity maps. Sensitivity maps show
 [4] [SmoothGrad: removing noise by adding noise](https://arxiv.org/abs/1706.03825)
 
 [5] [XNOR-Net: ImageNet Classification Using Binary Convolutional Neural Networks](https://arxiv.org/abs/1603.05279)
+
+[6] [Snapshot Ensembles: Train 1, get M for free](https://arxiv.org/abs/1704.00109)
