@@ -4,7 +4,7 @@ from torch.nn.init import normal, constant
 from resnet import resnet18
 
 
-def get_model(class_weights):
+def get_model(class_weights=None):
 
     model = resnet18(pretrained=True)
 
